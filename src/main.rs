@@ -1,6 +1,6 @@
 use std::{
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use nix::unistd::{AccessFlags, access};
@@ -19,7 +19,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "exit" => return Ok(()),
             "echo" => echo(&command[1..]),
             "type" => type_command(&command[1..]),
-            _ => println!("{}: command not found", command[0]),
+            _ => {
+                if let Some(path) = find_executable(command[0]) {
+                    execute(&path, &command[1..])?;
+                } else {
+                    println!("{}: command not found", command[0]);
+                }
+            }
         }
         io::stdout().flush()?;
         input.clear();
@@ -61,4 +67,11 @@ fn find_executable(name: &str) -> Option<PathBuf> {
 
 fn is_executable(path: &PathBuf) -> bool {
     access(path, AccessFlags::X_OK).is_ok()
+}
+
+fn execute(path: &Path, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+    std::process::Command::new(path.file_name().unwrap_or_default())
+        .args(args)
+        .status()?;
+    Ok(())
 }
