@@ -1,11 +1,12 @@
 use std::{
+    env,
     io::{self, Write},
     path::{Path, PathBuf},
 };
 
 use nix::unistd::{AccessFlags, access};
 
-const BUILTINS: &[&str] = &["exit", "echo", "type"];
+const BUILTINS: &[&str] = &["exit", "echo", "type", "pwd"];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stdin = io::stdin();
@@ -19,6 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "exit" => return Ok(()),
             "echo" => echo(&command[1..]),
             "type" => type_command(&command[1..]),
+            "pwd" => pwd()?,
             _ => {
                 if let Some(path) = find_executable(command[0]) {
                     execute(&path, &command[1..])?;
@@ -73,5 +75,11 @@ fn execute(path: &Path, args: &[&str]) -> Result<(), Box<dyn std::error::Error>>
     std::process::Command::new(path.file_name().unwrap_or_default())
         .args(args)
         .status()?;
+    Ok(())
+}
+
+fn pwd() -> Result<(), Box<dyn std::error::Error>> {
+    let path = env::current_dir()?;
+    println!("{}", path.display());
     Ok(())
 }
