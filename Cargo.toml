@@ -8,4 +8,5 @@ rust-version = "1.96"
 [dependencies]
 anyhow = "1.0.68"                                # error handling
 bytes = "1.3.0"                                  # helps manage buffers
+nix = { version = "0.31.3", features = ["fs"] }
 thiserror = "1.0.38"                             # error handling

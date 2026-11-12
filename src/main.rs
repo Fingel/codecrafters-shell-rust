@@ -1,4 +1,9 @@
-use std::io::{self, Write};
+use std::{
+    io::{self, Write},
+    path::PathBuf,
+};
+
+use nix::unistd::{AccessFlags, access};
 
 const BUILTINS: &[&str] = &["exit", "echo", "type"];
 
@@ -32,9 +37,28 @@ fn type_command(args: &[&str]) {
     if args.len() != 1 {
         return;
     }
-    if BUILTINS.contains(&args[0]) {
-        println!("{} is a shell builtin", args[0]);
+    let arg = args[0];
+    if BUILTINS.contains(&arg) {
+        println!("{} is a shell builtin", arg);
+    } else if let Some(path) = find_executable(arg) {
+        println!("{} is {}", arg, path.display());
     } else {
-        println!("{}: not found", args[0]);
+        println!("{}: not found", arg);
     }
+}
+
+fn find_executable(name: &str) -> Option<PathBuf> {
+    let path = std::env::var("PATH").unwrap_or_default();
+    for dir in path.split(':') {
+        let mut path = PathBuf::from(dir);
+        path.push(name);
+        if path.is_file() && is_executable(&path) {
+            return Some(path);
+        }
+    }
+    None
+}
+
+fn is_executable(path: &PathBuf) -> bool {
+    access(path, AccessFlags::X_OK).is_ok()
 }
