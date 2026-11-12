@@ -8,7 +8,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         print!("$ ");
         io::stdout().flush()?;
         stdin.read_line(&mut input)?;
-        println!("{}: command not found", input.trim());
+        let command = input.trim();
+        match command {
+            "exit" => return Ok(()),
+            _ => println!("{}: command not found", command),
+        }
         io::stdout().flush()?;
         input.clear();
     }
