@@ -6,7 +6,7 @@ use std::{
 
 use nix::unistd::{AccessFlags, access};
 
-const BUILTINS: &[&str] = &["exit", "echo", "type", "pwd"];
+const BUILTINS: &[&str] = &["exit", "echo", "type", "pwd", "cd"];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stdin = io::stdin();
@@ -16,18 +16,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         io::stdout().flush()?;
         stdin.read_line(&mut input)?;
         let command: Vec<&str> = input.split_whitespace().collect(); // need to handle quotes
-        match command[0] {
+        // should check for error here
+        let result = match command[0] {
             "exit" => return Ok(()),
-            "echo" => echo(&command[1..]),
-            "type" => type_command(&command[1..]),
-            "pwd" => pwd()?,
-            _ => {
-                if let Some(path) = find_executable(command[0]) {
+            "echo" => {
+                echo(&command[1..]);
+                Ok(())
+            }
+            "type" => {
+                type_command(&command[1..]);
+                Ok(())
+            }
+            "pwd" => pwd(),
+            "cd" => cd(&command[1..]),
+            other => {
+                if let Some(path) = find_executable(other) {
                     execute(&path, &command[1..])?;
+                    Ok(())
                 } else {
-                    println!("{}: command not found", command[0]);
+                    Err(format!("{}: command not found", other).into())
                 }
             }
+        };
+        if let Err(e) = result {
+            println!("{}", e);
         }
         io::stdout().flush()?;
         input.clear();
@@ -81,5 +93,22 @@ fn execute(path: &Path, args: &[&str]) -> Result<(), Box<dyn std::error::Error>>
 fn pwd() -> Result<(), Box<dyn std::error::Error>> {
     let path = env::current_dir()?;
     println!("{}", path.display());
+    Ok(())
+}
+
+fn cd(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+    if args.len() > 1 {
+        return Err("cd: too many arguments".into());
+    }
+    let path = if args.is_empty() {
+        let home = env::var("HOME").unwrap_or_default();
+        PathBuf::from(home)
+    } else {
+        PathBuf::from(args[0])
+    };
+    if !path.exists() {
+        return Err(format!("cd: {}: No such file or directory", path.display()).into());
+    }
+    env::set_current_dir(&path)?;
     Ok(())
 }
