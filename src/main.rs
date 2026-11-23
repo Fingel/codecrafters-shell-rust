@@ -100,7 +100,7 @@ fn cd(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
     if args.len() > 1 {
         return Err("cd: too many arguments".into());
     }
-    let path = if args.is_empty() {
+    let path = if args.is_empty() || args[0] == "~" {
         let home = env::var("HOME").unwrap_or_default();
         PathBuf::from(home)
     } else {
